@@ -1,0 +1,152 @@
+---
+title: "Market Analysis of Mobile"
+author: "Chao Wen Tsai"
+date: "2025-03-23"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    includes:
+      in_header: preamble.tex
+  html_document: default
+---
+*Open data from Kaggle [Mobiles Dataset (2025)](https://www.kaggle.com/datasets/abdulmalik1518/mobiles-dataset-2025)*
+
+### 一、專案概述
+
+在現今數位化時代，手機市場競爭激烈，產品種類繁多。為了深入了解手機市場格局、產品特性以及消費者需求，對手機相關數據進行全面而深入的分析顯得格外重要。
+
+本專案旨在透過對包含多品牌、多型號手機資訊的資料集進行分析，挖掘有價值的信息，為手機製造商、銷售商以及消費者提供決策依據。
+
+### 加載必要的R包並讀取數據集。
+```{r load tidyverse package}
+library(tidyverse)
+
+# 讀取數據集
+df <- read_csv('C:/Users/chao/Desktop/Data Analysis/Datasets/Mobiles Dataset (2025).csv')
+```
+
+### 查看數據基本資料
+```{r view data}
+print('數據基本資料：')
+glimpse(df)
+```
+
+### 查看數據集行數和列數
+```{r View datasets col & row}
+library(dplyr)
+  # 用dplyr包中的print()函数的替代方法，比如print.data.frame()
+  # 也可用tibble package tbl_df函數處理
+rows <- nrow(df)
+columns <- ncol(df)
+
+if (rows < 100 && columns < 20) {
+  # 短表數據（行數少於100且列數少於20）查看全量數據資料
+  print('數據全部内容訊息：')
+  print.data.frame(df, na = 'nan')
+} else {
+  # 長表數據查看數據前幾行訊息
+  print('數據前幾行內容訊息：')
+  print.data.frame(head(df), na = 'nan')
+}
+```
+
+## 二、不同品牌手機數量分布
+### 統計不同品牌手機數量
+```{r brand & mobile counts}
+company_counts <- df %>% 
+  count(`Company Name`) %>% 
+  arrange(desc(n))
+print(company_counts)
+```
+
+### 繪製柱狀圖
+```{r bar chart}
+ggplot(company_counts, aes(x = reorder(`Company Name`, n), y = n)) +
+  geom_bar(stat = 'identity', fill = 'skyblue') +
+  coord_flip() +
+  labs(x = 'Mobile Brands', y = 'Number of Mobile', title = 'Distribution of Mobile Counts by Brand') +
+  theme_minimal() # 簡約主題函數，移除不必要的裝飾元素，保留基本繪圖元素(去除灰底)
+```
+
+**分析結果**:
+
+從柱狀圖中我們可以直觀的看出不同品牌手機數量的差異。數量較多的品牌可能在市場上更具競爭力，擁有更大的市場份額。
+
+## 三、不同年份手機發布數量
+### 統計不同年份手機發布數量
+```{r launched year & counts}
+year_counts <- df %>% 
+  count(`Launched Year`) %>% 
+  arrange(`Launched Year`)
+print(year_counts)
+```
+
+### 繪製折線圖
+```{r line chart}
+ggplot(year_counts, aes(x = `Launched Year`, y = n)) +
+  geom_line(group = 1, color ='lightblue') +
+  geom_point() +
+  labs(x = 'Release Year', y = 'Number of Releases', title = 'Number of Mobile Releases by Year') +
+  theme_minimal()
+```
+
+**分析結果**:
+
+通過折線圖可以觀察到手機發布數量隨時間的變化趨勢。
+這有助於我們了解手機市場的發展動態，例如是否呈現增長或下降趨勢，是否有週期性變化等。
+
+## 四、手機各性能參數相關性分析
+### 對手機的性能參數列進行數據預處理，提取數值部分並轉換為數值類型。
+### 提取性能參數列
+```{r transform data type}
+df_clean <- df %>% 
+  select(`Mobile Weight`, `RAM`, `Front Camera`, `Back Camera`, `Processor`, `Battery Capacity`, `Screen Size`)
+print(df_clean)
+```
+
+### 定義函數提取數值
+```{r}
+extract_numeric <- function(x) {
+  as.numeric(str_extract(x, '\\d+\\.?\\d*'))
+# as.numeric 輸入值轉換為數值類型，'\\d+\\.?\\d*'匹配整數、小數。
+}
+```
+
+### 對各性能參數列進行數據轉換
+```{r}
+df_clean <- df_clean %>% 
+  mutate(across(everything(), extract_numeric))
+print(df_clean)
+```
+
+### 計算相關矩陣計算相關性矩陣
+```{r}
+corr_matrix <- cor(df_clean, use = 'pairwise.complete.obs')
+print(corr_matrix)
+```
+
+### 繪製熱力圖
+```{r}
+library(corrplot)
+
+# 因Title會被切半，故設置圖形的邊距，這裡增加頂部邊距
+par(mar = c(5, 4, 8, 2)) #  8 是頂部邊距
+
+corrplot(corr_matrix, method = 'color', type = 'upper', 
+         addCoef.col = 'black', tl.col = 'black', tl.srt = 45,
+         title = 'Heatmap of Correlation Analysis for Mobile Performance Parameters')
+```
+
+**分析結果**:
+
+從相關性熱力圖中，我們可以直觀的看到各性能參數之間的相關強弱。正相關表示兩個參數的變化趨勢一致，負相關表示變化趨勢相反。這有助於我們了解手機性能參數之間的內在關係，例如是否存在某些參數相互制約或協同的情況。
+
+## 五、總結與建議
+### 品牌市場狀況
+根據不同品牌手機數量的分佈，我們可以推測某些品牌在市場上佔據主導地位，而一些小眾品牌可能需要進一步提升市場競爭力。建議小眾品牌深入研究市場需求，推出更具特色的產品，加強行銷與品牌推廣。
+
+### 發布趨勢
+從不同年份手機發布數量的變化趨勢，我們可以預測未來手機市場的發展方向。如果呈現成長趨勢，廠商可以加大研發投入，推出更多新品；如果呈現下降趨勢，則需要謹慎規劃產品發布策略，並專注於產品品質和創新。
+
+### 性能參數關係
+根據性能參數的相關性分析，廠商在設計手機時可以考慮參數之間的相互關係，優化產品性能。例如，如果兩個參數正相關且都對使用者體驗很重要，可以同時提升這兩個參數的效能；如果是負相關，則需要在兩者之間進行權衡。
